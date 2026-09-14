@@ -563,8 +563,8 @@ function uploadSchedule(evt){
       state = Object.assign(state, loaded);
       restoreUIFromState();
       saveLocal();
-      goStep("overview");
-      alert("Raspored je uspešno učitan!");
+      goStep("smena");
+      alert("Raspored je učitan. Izaberite da li je pre ili po podne, da bi se prikazala tačna vremena.");
     }catch(err){
       alert("Fajl nije validan.");
     }
