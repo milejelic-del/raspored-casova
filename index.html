@@ -203,6 +203,9 @@
     <h2>1. Da li dete ide u školu pre podne ili po podne?</h2>
     <button class="btn" onclick="setSmena('pre')">☀️ Pre podne</button>
     <button class="btn secondary" onclick="setSmena('po')">🌇 Po podne</button>
+    <p style="text-align:center;color:var(--muted);font-size:.8rem;margin:14px 0 8px;">— ili —</p>
+    <button class="btn outline" onclick="document.getElementById('fileInputStart').click()">📂 Već imate sačuvan raspored? Učitajte fajl</button>
+    <input type="file" id="fileInputStart" accept="application/json" onchange="uploadSchedule(event)">
   </div>
 
   <!-- KORAK 2: RAZRED -->
@@ -549,20 +552,16 @@ function uploadSchedule(evt){
     try{
       const loaded = JSON.parse(e.target.result);
       state = Object.assign(state, loaded);
-      document.getElementById("startPre").value = state.settings.startPre;
-      document.getElementById("startPo").value = state.settings.startPo;
-      document.getElementById("lessonLen").value = state.settings.lessonLen;
-      document.getElementById("bigBreak").value = state.settings.bigBreak;
-      document.getElementById("smallBreak").value = state.settings.smallBreak;
-      renderSubjectTags();
-      renderOverview();
+      restoreUIFromState();
       saveLocal();
+      goStep("overview");
       alert("Raspored je uspešno učitan!");
     }catch(err){
       alert("Fajl nije validan.");
     }
   };
   reader.readAsText(file);
+  evt.target.value = "";
 }
 
 function resetAll(){
