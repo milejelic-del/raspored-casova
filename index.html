@@ -251,9 +251,12 @@
     <div class="topnav"><button onclick="goStep('subjects')">‹ Nazad</button><button onclick="goStep('overview')">Pregled ✓</button></div>
     <h2>4. Unesi raspored — dan po dan</h2>
     <div class="day-tabs" id="dayTabs"></div>
-    <label>Broj časova tog dana</label>
-    <select id="numPeriods" onchange="setNumPeriods()"></select>
-    <div id="periodRows"></div>
+    <div id="schoolSection">
+      <label>Broj časova tog dana</label>
+      <select id="numPeriods" onchange="setNumPeriods()"></select>
+      <div id="periodRows"></div>
+    </div>
+    <div id="weekendNote" class="empty-msg hidden">Vikendom nema nastave — ispod možete dodati samo vanškolske aktivnosti.</div>
 
     <hr style="border:none;border-top:1px solid #2a2a3a;margin:18px 0 12px;">
     <h3 style="margin:0 0 10px;font-size:1rem;color:var(--accent);">⚽ Vanškolske aktivnosti</h3>
@@ -292,6 +295,7 @@
     <div class="topnav"><button onclick="goStep('schedule')">‹ Izmeni raspored</button><span></span></div>
     <h2>📅 Nedeljni raspored</h2>
     <p style="color:var(--accent);font-size:.8rem;margin-top:-6px;">✓ Raspored se automatski čuva na ovom telefonu/računaru</p>
+    <div class="day-tabs" id="overviewDayTabs"></div>
     <div id="overviewContent"></div>
     <button class="btn secondary" style="margin-top:10px" onclick="downloadSchedule()">⬇️ Sačuvaj raspored (fajl)</button>
     <button class="btn outline" onclick="document.getElementById('fileInput').click()">⬆️ Učitaj sačuvani raspored</button>
@@ -301,7 +305,8 @@
 </div>
 
 <script>
-const DAYS = ["Ponedeljak","Utorak","Sreda","Četvrtak","Petak"];
+const WEEKDAYS = ["Ponedeljak","Utorak","Sreda","Četvrtak","Petak"];
+const DAYS = WEEKDAYS.concat(["Subota","Nedelja"]);
 
 const SUBJECTS_OSNOVNA = {
   "1": ["Srpski jezik","Matematika","Svet oko nas","Likovna kultura","Muzička kultura","Fizičko i zdravstveno vaspitanje","Engleski jezik","Digitalni svet","Verska nastava / Građansko vaspitanje"],
@@ -337,7 +342,7 @@ function goStep(name){
   document.querySelectorAll(".step").forEach(s=>s.classList.add("hidden"));
   document.getElementById("step-"+name).classList.remove("hidden");
   if(name==="schedule"){ renderDayTabs(); renderPeriodRows(); renderExtraActivities(); }
-  if(name==="overview"){ renderOverview(); }
+  if(name==="overview"){ overviewActiveDay = todayDayName(); renderOverviewTabs(); renderOverview(); }
   window.scrollTo(0,0);
 }
 
@@ -467,6 +472,17 @@ function fmt(mins){
 }
 
 function renderPeriodRows(){
+  const schoolSection = document.getElementById("schoolSection");
+  const weekendNote = document.getElementById("weekendNote");
+  const isWeekend = !WEEKDAYS.includes(activeDay);
+  if(isWeekend){
+    schoolSection.classList.add("hidden");
+    weekendNote.classList.remove("hidden");
+    return;
+  }
+  schoolSection.classList.remove("hidden");
+  weekendNote.classList.add("hidden");
+
   const numSel = document.getElementById("numPeriods");
   numSel.innerHTML = "";
   for(let i=1;i<=8;i++){
@@ -567,35 +583,55 @@ function saveSettings(){
   saveLocal();
 }
 
+let overviewActiveDay = null;
+function todayDayName(){
+  const map = {1:"Ponedeljak",2:"Utorak",3:"Sreda",4:"Četvrtak",5:"Petak",6:"Subota",0:"Nedelja"};
+  return map[new Date().getDay()];
+}
+function renderOverviewTabs(){
+  const wrap = document.getElementById("overviewDayTabs");
+  wrap.innerHTML = "";
+  DAYS.forEach(d=>{
+    const b = document.createElement("button");
+    b.textContent = d;
+    if(d===overviewActiveDay) b.classList.add("active");
+    b.onclick = ()=>{ overviewActiveDay = d; renderOverviewTabs(); renderOverview(); };
+    wrap.appendChild(b);
+  });
+}
+
 function renderOverview(){
   const wrap = document.getElementById("overviewContent");
   wrap.innerHTML = "";
+  if(!overviewActiveDay) overviewActiveDay = todayDayName();
+  const d = overviewActiveDay;
   const startStr = state.smena==="pre" ? state.settings.startPre : state.settings.startPo;
-  DAYS.forEach(d=>{
-    const arr = state.schedule[d] || [];
-    const periods = computePeriods(arr.length || 0, startStr);
-    const box = document.createElement("div");
-    box.className="overview-day card";
-    box.style.boxShadow="none";
-    box.style.background="#20202e";
-    let html = `<h3>${d}</h3>`;
-    if(arr.length===0){
-      html += `<div class="empty-msg">Nema unetih časova za ovaj dan.</div>`;
-    }else{
-      arr.forEach((subj,i)=>{
-        html += `<div class="overview-row"><span>${i+1}. ${subj || "<i>—</i>"}</span><span class="t">${fmt(periods[i].start)}–${fmt(periods[i].end)}</span></div>`;
-      });
-    }
-    const extraList = (state.extra[d] || []).filter(a=>a.name && a.name.trim());
-    if(extraList.length){
-      html += `<h4 style="margin:12px 0 6px;font-size:.8rem;color:var(--accent);">⚽ Vanškolske aktivnosti</h4>`;
-      extraList.forEach(act=>{
-        html += `<div class="overview-row"><span>${act.name}</span><span class="t">${act.start}–${act.end}</span></div>`;
-      });
-    }
-    box.innerHTML = html;
-    wrap.appendChild(box);
-  });
+  const arr = state.schedule[d] || [];
+  const periods = computePeriods(arr.length || 0, startStr);
+  const box = document.createElement("div");
+  box.className="overview-day card";
+  box.style.boxShadow="none";
+  box.style.background="#20202e";
+  let html = `<h3>${d}${d===todayDayName() ? ' <span style="color:var(--accent);font-size:.75rem;">(danas)</span>' : ''}</h3>`;
+  const isWeekend = !WEEKDAYS.includes(d);
+  if(isWeekend){
+    html += `<div class="empty-msg">Vikend — nema nastave.</div>`;
+  }else if(arr.length===0){
+    html += `<div class="empty-msg">Nema unetih časova za ovaj dan.</div>`;
+  }else{
+    arr.forEach((subj,i)=>{
+      html += `<div class="overview-row"><span>${i+1}. ${subj || "<i>—</i>"}</span><span class="t">${fmt(periods[i].start)}–${fmt(periods[i].end)}</span></div>`;
+    });
+  }
+  const extraList = (state.extra[d] || []).filter(a=>a.name && a.name.trim());
+  if(extraList.length){
+    html += `<h4 style="margin:12px 0 6px;font-size:.8rem;color:var(--accent);">⚽ Vanškolske aktivnosti</h4>`;
+    extraList.forEach(act=>{
+      html += `<div class="overview-row"><span>${act.name}</span><span class="t">${act.start}–${act.end}</span></div>`;
+    });
+  }
+  box.innerHTML = html;
+  wrap.appendChild(box);
 }
 
 function downloadSchedule(){
