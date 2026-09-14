@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Raspored časova</title>
+<style>
+  :root{
+    --primary:#8b7cf6;
+    --primary-dark:#a595ff;
+    --accent:#2ecc9b;
+    --bg:#14141c;
+    --card:#1e1e2a;
+    --text:#eceaf6;
+    --muted:#9695ab;
+    --danger:#ff6b6b;
+    --radius:16px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:linear-gradient(160deg,#181822 0%,#14141c 45%,#101018 100%);
+    color:var(--text);
+    min-height:100vh;
+  }
+  #app{
+    max-width:520px;
+    margin:0 auto;
+    padding:16px 16px 60px;
+  }
+  header{
+    text-align:center;
+    padding:18px 0 10px;
+  }
+  header h1{
+    font-size:1.4rem;
+    margin:0 0 4px;
+  }
+  header p{
+    margin:0;
+    color:var(--muted);
+    font-size:.9rem;
+  }
+  .card{
+    background:var(--card);
+    border-radius:var(--radius);
+    padding:18px;
+    margin-bottom:14px;
+    box-shadow:0 4px 18px rgba(0,0,0,.35);
+  }
+  .hidden{display:none !important;}
+  h2{font-size:1.1rem;margin-top:0;}
+  .btn{
+    display:block;
+    width:100%;
+    padding:14px;
+    border:none;
+    border-radius:12px;
+    background:var(--primary);
+    color:#fff;
+    font-size:1rem;
+    font-weight:600;
+    margin-bottom:10px;
+    cursor:pointer;
+    transition:transform .05s ease, background .15s ease;
+  }
+  .btn:active{transform:scale(.98);}
+  .btn.secondary{
+    background:#2a2a3d;
+    color:var(--primary-dark);
+  }
+  .btn.outline{
+    background:transparent;
+    color:var(--primary-dark);
+    border:2px solid var(--primary);
+  }
+  .btn.small{
+    padding:8px 12px;
+    font-size:.85rem;
+    width:auto;
+    display:inline-block;
+    margin:0;
+  }
+  .btn.danger{background:var(--danger);}
+  .choice-grid{display:flex;gap:10px;}
+  .choice-grid .btn{margin-bottom:0;}
+  select, input[type=text], input[type=time], input[type=number]{
+    width:100%;
+    padding:12px;
+    border-radius:10px;
+    border:1.5px solid #33334a;
+    font-size:1rem;
+    margin-bottom:10px;
+    background:#20202e;
+    color:var(--text);
+  }
+  select option{background:#20202e;color:var(--text);}
+  label{font-size:.85rem;color:var(--muted);display:block;margin-bottom:4px;}
+  .tag-list{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+  .tag{
+    background:#2a2a3d;
+    color:var(--primary-dark);
+    padding:7px 10px;
+    border-radius:20px;
+    font-size:.85rem;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .tag button{
+    border:none;background:none;color:var(--danger);
+    font-weight:bold;cursor:pointer;font-size:.9rem;line-height:1;
+  }
+  .add-row{display:flex;gap:8px;}
+  .add-row input{margin-bottom:0;flex:1;}
+  .day-tabs{
+    display:flex;
+    overflow-x:auto;
+    gap:6px;
+    margin-bottom:14px;
+    padding-bottom:4px;
+  }
+  .day-tabs button{
+    flex:0 0 auto;
+    padding:8px 14px;
+    border-radius:10px;
+    border:none;
+    background:#2a2a3d;
+    color:var(--primary-dark);
+    font-size:.85rem;
+    font-weight:600;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .day-tabs button.active{
+    background:var(--primary);
+    color:#101018;
+  }
+  .period-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:10px;
+    background:#20202e;
+    border-radius:12px;
+    padding:8px 10px;
+  }
+  .period-row .num{
+    width:26px;height:26px;border-radius:50%;
+    background:var(--primary);color:#101018;
+    display:flex;align-items:center;justify-content:center;
+    font-size:.8rem;font-weight:700;flex:0 0 auto;
+  }
+  .period-row select{margin:0;flex:1;}
+  .period-row .time{
+    font-size:.78rem;color:var(--muted);
+    width:92px;flex:0 0 auto;text-align:right;
+  }
+  .break-note{
+    font-size:.75rem;
+    color:var(--accent);
+    text-align:center;
+    margin:-4px 0 8px;
+  }
+  .overview-day h3{
+    margin:0 0 8px;
+    font-size:1rem;
+    color:var(--primary-dark);
+  }
+  .overview-row{
+    display:flex;
+    justify-content:space-between;
+    padding:7px 0;
+    border-bottom:1px solid #2a2a3a;
+    font-size:.9rem;
+  }
+  .overview-row:last-child{border-bottom:none;}
+  .overview-row .t{color:var(--muted);font-size:.8rem;}
+  details{margin-bottom:14px;}
+  summary{cursor:pointer;font-weight:600;color:var(--primary-dark);margin-bottom:8px;}
+  .row2{display:flex;gap:10px;}
+  .row2>div{flex:1;}
+  .topnav{display:flex;justify-content:space-between;margin-bottom:10px;}
+  .topnav button{
+    background:none;border:none;color:var(--primary-dark);
+    font-weight:600;font-size:.9rem;cursor:pointer;padding:6px 0;
+  }
+  .empty-msg{color:var(--muted);font-size:.85rem;text-align:center;padding:10px 0;}
+  input[type=file]{display:none;}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>📚 Raspored časova</h1>
+    <p style="margin:0 0 6px;color:var(--muted);font-size:.78rem;">by Mile Jelić</p>
+    <p>Tačno vreme svakog časa, prilagođeno vašem detetu</p>
+  </header>
+
+  <!-- KORAK 1: SMENA -->
+  <div class="step card" id="step-smena">
+    <h2>1. Da li dete ide u školu pre podne ili po podne?</h2>
+    <button class="btn" onclick="setSmena('pre')">☀️ Pre podne</button>
+    <button class="btn secondary" onclick="setSmena('po')">🌇 Po podne</button>
+  </div>
+
+  <!-- KORAK 2: RAZRED -->
+  <div class="step card hidden" id="step-razred">
+    <div class="topnav"><button onclick="goStep('smena')">‹ Nazad</button><span></span></div>
+    <h2>2. Koji razred dete pohađa?</h2>
+    <label>Nivo škole</label>
+    <select id="tipSkole" onchange="renderRazredOptions()">
+      <option value="osnovna">Osnovna škola (1–8)</option>
+      <option value="srednja">Srednja škola (I–IV)</option>
+    </select>
+    <label>Razred</label>
+    <select id="razredSelect"></select>
+    <button class="btn" onclick="confirmRazred()">Dalje →</button>
+  </div>
+
+  <!-- KORAK 3: PREDMETI -->
+  <div class="step card hidden" id="step-subjects">
+    <div class="topnav"><button onclick="goStep('razred')">‹ Nazad</button><span></span></div>
+    <h2>3. Predmeti za odabrani razred</h2>
+    <p style="color:var(--muted);font-size:.85rem;margin-top:-6px;">
+      Ovo je orijentacioni spisak (svaka škola ima izborne predmete). Slobodno obrišite ili dodajte predmete.
+    </p>
+    <div class="tag-list" id="subjectTags"></div>
+    <div class="add-row">
+      <input type="text" id="newSubjectInput" placeholder="Dodaj predmet…">
+      <button class="btn small" onclick="addSubject()">Dodaj</button>
+    </div>
+    <button class="btn" style="margin-top:10px" onclick="goStep('schedule')">Nastavi na raspored →</button>
+  </div>
+
+  <!-- KORAK 4: UNOS RASPOREDA -->
+  <div class="step card hidden" id="step-schedule">
+    <div class="topnav"><button onclick="goStep('subjects')">‹ Nazad</button><button onclick="goStep('overview')">Pregled ✓</button></div>
+    <h2>4. Unesi raspored — dan po dan</h2>
+    <div class="day-tabs" id="dayTabs"></div>
+    <label>Broj časova tog dana</label>
+    <select id="numPeriods" onchange="setNumPeriods()"></select>
+    <div id="periodRows"></div>
+
+    <details>
+      <summary>⚙️ Podešavanja vremena (opciono)</summary>
+      <div class="row2">
+        <div>
+          <label>Početak — pre podne</label>
+          <input type="time" id="startPre" value="07:30" onchange="saveSettings()">
+        </div>
+        <div>
+          <label>Početak — po podne</label>
+          <input type="time" id="startPo" value="14:00" onchange="saveSettings()">
+        </div>
+      </div>
+      <div class="row2">
+        <div>
+          <label>Trajanje časa (min)</label>
+          <input type="number" id="lessonLen" value="45" min="20" max="90" onchange="saveSettings()">
+        </div>
+        <div>
+          <label>Veliki odmor posle 2. časa (min)</label>
+          <input type="number" id="bigBreak" value="15" min="5" max="30" onchange="saveSettings()">
+        </div>
+      </div>
+      <label>Mali odmor posle ostalih časova (min)</label>
+      <input type="number" id="smallBreak" value="5" min="1" max="20" onchange="saveSettings()">
+    </details>
+  </div>
+
+  <!-- KORAK 5: PREGLED -->
+  <div class="step card hidden" id="step-overview">
+    <div class="topnav"><button onclick="goStep('schedule')">‹ Izmeni raspored</button><span></span></div>
+    <h2>📅 Nedeljni raspored</h2>
+    <p style="color:var(--accent);font-size:.8rem;margin-top:-6px;">✓ Raspored se automatski čuva na ovom telefonu/računaru</p>
+    <div id="overviewContent"></div>
+    <button class="btn secondary" style="margin-top:10px" onclick="downloadSchedule()">⬇️ Sačuvaj raspored (fajl)</button>
+    <button class="btn outline" onclick="document.getElementById('fileInput').click()">⬆️ Učitaj sačuvani raspored</button>
+    <input type="file" id="fileInput" accept="application/json" onchange="uploadSchedule(event)">
+    <button class="btn danger" style="margin-top:14px" onclick="resetAll()">Počni iznova</button>
+  </div>
+</div>
+
+<script>
+const DAYS = ["Ponedeljak","Utorak","Sreda","Četvrtak","Petak"];
+
+const SUBJECTS_OSNOVNA = {
+  "1": ["Srpski jezik","Matematika","Svet oko nas","Likovna kultura","Muzička kultura","Fizičko i zdravstveno vaspitanje","Engleski jezik","Digitalni svet","Verska nastava / Građansko vaspitanje"],
+  "2": ["Srpski jezik","Matematika","Svet oko nas","Likovna kultura","Muzička kultura","Fizičko i zdravstveno vaspitanje","Engleski jezik","Digitalni svet","Verska nastava / Građansko vaspitanje"],
+  "3": ["Srpski jezik","Matematika","Priroda i društvo","Likovna kultura","Muzička kultura","Fizičko i zdravstveno vaspitanje","Engleski jezik","Digitalni svet","Verska nastava / Građansko vaspitanje"],
+  "4": ["Srpski jezik","Matematika","Priroda i društvo","Likovna kultura","Muzička kultura","Fizičko i zdravstveno vaspitanje","Engleski jezik","Digitalni svet","Verska nastava / Građansko vaspitanje"],
+  "5": ["Srpski jezik","Matematika","Engleski jezik","Drugi strani jezik","Istorija","Geografija","Biologija","Likovna kultura","Muzička kultura","Tehnika i tehnologija","Informatika i računarstvo","Fizičko i zdravstveno vaspitanje","Verska nastava / Građansko vaspitanje"],
+  "6": ["Srpski jezik","Matematika","Engleski jezik","Drugi strani jezik","Istorija","Geografija","Biologija","Fizika","Likovna kultura","Muzička kultura","Tehnika i tehnologija","Informatika i računarstvo","Fizičko i zdravstveno vaspitanje","Verska nastava / Građansko vaspitanje"],
+  "7": ["Srpski jezik","Matematika","Engleski jezik","Drugi strani jezik","Istorija","Geografija","Biologija","Fizika","Hemija","Likovna kultura","Muzička kultura","Tehnika i tehnologija","Informatika i računarstvo","Fizičko i zdravstveno vaspitanje","Verska nastava / Građansko vaspitanje"],
+  "8": ["Srpski jezik","Matematika","Engleski jezik","Drugi strani jezik","Istorija","Geografija","Biologija","Fizika","Hemija","Likovna kultura","Muzička kultura","Tehničko i informatičko obrazovanje","Fizičko vaspitanje","Verska nastava / Građansko vaspitanje"]
+};
+const SUBJECTS_SREDNJA = {
+  "I": ["Srpski jezik i književnost","Matematika","Engleski jezik","Fizičko i zdravstveno vaspitanje","Istorija","Geografija","Fizika","Hemija","Biologija","Računarstvo i informatika"],
+  "II": ["Srpski jezik i književnost","Matematika","Engleski jezik","Fizičko i zdravstveno vaspitanje","Istorija","Geografija","Fizika","Hemija","Biologija"],
+  "III": ["Srpski jezik i književnost","Matematika","Engleski jezik","Fizičko i zdravstveno vaspitanje","Sociologija","Filozofija"],
+  "IV": ["Srpski jezik i književnost","Matematika","Engleski jezik","Fizičko i zdravstveno vaspitanje","Ustav i pravo građana","Filozofija"]
+};
+
+let state = {
+  smena: null,
+  tipSkole: "osnovna",
+  razred: "1",
+  subjects: [],
+  schedule: {},          // {Ponedeljak: [subj,subj,null,...]}
+  settings: { startPre:"07:30", startPo:"14:00", lessonLen:45, bigBreak:15, smallBreak:5 }
+};
+let activeDay = DAYS[0];
+
+DAYS.forEach(d => state.schedule[d] = []);
+
+function goStep(name){
+  document.querySelectorAll(".step").forEach(s=>s.classList.add("hidden"));
+  document.getElementById("step-"+name).classList.remove("hidden");
+  if(name==="schedule"){ renderDayTabs(); renderPeriodRows(); }
+  if(name==="overview"){ renderOverview(); }
+  window.scrollTo(0,0);
+}
+
+const STORAGE_KEY = "rasporedCasovaState_v1";
+function saveLocal(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){ /* localStorage nedostupan */ }
+}
+function loadLocal(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return false;
+    const loaded = JSON.parse(raw);
+    state = Object.assign(state, loaded);
+    return true;
+  }catch(e){ return false; }
+}
+function clearLocal(){
+  try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+}
+
+function setSmena(val){
+  state.smena = val;
+  saveLocal();
+  const hasSavedSetup = state.razred && state.subjects && state.subjects.length > 0;
+  if(hasSavedSetup){
+    goStep("overview");
+  }else{
+    goStep("razred");
+    renderRazredOptions();
+  }
+}
+
+function renderRazredOptions(){
+  const tip = document.getElementById("tipSkole").value;
+  state.tipSkole = tip;
+  const sel = document.getElementById("razredSelect");
+  sel.innerHTML = "";
+  const opts = tip === "osnovna" ? Object.keys(SUBJECTS_OSNOVNA) : Object.keys(SUBJECTS_SREDNJA);
+  opts.forEach(r=>{
+    const o = document.createElement("option");
+    o.value = r;
+    o.textContent = tip==="osnovna" ? (r+". razred") : (r+" razred (srednja)");
+    sel.appendChild(o);
+  });
+}
+
+function confirmRazred(){
+  state.razred = document.getElementById("razredSelect").value;
+  const table = state.tipSkole === "osnovna" ? SUBJECTS_OSNOVNA : SUBJECTS_SREDNJA;
+  state.subjects = [...(table[state.razred] || [])];
+  renderSubjectTags();
+  goStep("subjects");
+  saveLocal();
+}
+
+function renderSubjectTags(){
+  const wrap = document.getElementById("subjectTags");
+  wrap.innerHTML = "";
+  if(state.subjects.length===0){
+    wrap.innerHTML = '<div class="empty-msg">Nema dodatih predmeta — dodajte ih ispod.</div>';
+    return;
+  }
+  state.subjects.forEach((s,i)=>{
+    const tag = document.createElement("div");
+    tag.className="tag";
+    tag.innerHTML = `<span>${s}</span><button onclick="removeSubject(${i})">✕</button>`;
+    wrap.appendChild(tag);
+  });
+}
+function addSubject(){
+  const inp = document.getElementById("newSubjectInput");
+  const val = inp.value.trim();
+  if(val && !state.subjects.includes(val)){
+    state.subjects.push(val);
+    inp.value="";
+    renderSubjectTags();
+    saveLocal();
+  }
+}
+function removeSubject(i){
+  state.subjects.splice(i,1);
+  renderSubjectTags();
+  saveLocal();
+}
+
+function renderDayTabs(){
+  const wrap = document.getElementById("dayTabs");
+  wrap.innerHTML = "";
+  DAYS.forEach(d=>{
+    const b = document.createElement("button");
+    b.textContent = d;
+    if(d===activeDay) b.classList.add("active");
+    b.onclick = ()=>{ activeDay=d; renderDayTabs(); renderPeriodRows(); };
+    wrap.appendChild(b);
+  });
+}
+
+function setNumPeriods(){
+  const n = parseInt(document.getElementById("numPeriods").value,10);
+  const arr = state.schedule[activeDay] || [];
+  const newArr = new Array(n).fill(null).map((_,i)=> arr[i] || null);
+  state.schedule[activeDay] = newArr;
+  renderPeriodRows();
+  saveLocal();
+}
+
+function computePeriods(numPeriods, startStr){
+  const s = state.settings;
+  const [h,m] = startStr.split(":").map(Number);
+  let cursor = h*60+m;
+  const periods = [];
+  for(let i=1;i<=numPeriods;i++){
+    const start = cursor;
+    const end = start + s.lessonLen;
+    periods.push({start,end});
+    cursor = end;
+    if(i < numPeriods){
+      cursor += (i===2 ? s.bigBreak : s.smallBreak);
+    }
+  }
+  return periods;
+}
+function fmt(mins){
+  const h = Math.floor(mins/60)%24;
+  const m = mins%60;
+  return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0");
+}
+
+function renderPeriodRows(){
+  const numSel = document.getElementById("numPeriods");
+  numSel.innerHTML = "";
+  for(let i=1;i<=8;i++){
+    const o = document.createElement("option");
+    o.value=i; o.textContent = i+" časova";
+    numSel.appendChild(o);
+  }
+  const current = state.schedule[activeDay] || [];
+  numSel.value = current.length || 5;
+  if(!state.schedule[activeDay] || state.schedule[activeDay].length===0){
+    state.schedule[activeDay] = new Array(parseInt(numSel.value,10)).fill(null);
+  }
+
+  const startStr = state.smena==="pre" ? state.settings.startPre : state.settings.startPo;
+  const n = state.schedule[activeDay].length;
+  const periods = computePeriods(n, startStr);
+
+  const rowsWrap = document.getElementById("periodRows");
+  rowsWrap.innerHTML = "";
+  if(state.subjects.length===0){
+    rowsWrap.innerHTML = '<div class="empty-msg">Prvo dodajte predmete u prethodnom koraku.</div>';
+    return;
+  }
+  for(let i=0;i<n;i++){
+    const row = document.createElement("div");
+    row.className="period-row";
+    const sel = document.createElement("select");
+    sel.innerHTML = '<option value="">— izaberi predmet —</option>' +
+      state.subjects.map(s=>`<option value="${s}" ${state.schedule[activeDay][i]===s?"selected":""}>${s}</option>`).join("");
+    sel.onchange = (e)=>{ state.schedule[activeDay][i] = e.target.value || null; saveLocal(); };
+    const numBadge = document.createElement("div");
+    numBadge.className="num"; numBadge.textContent = i+1;
+    const time = document.createElement("div");
+    time.className="time";
+    time.textContent = fmt(periods[i].start)+"–"+fmt(periods[i].end);
+    row.appendChild(numBadge);
+    row.appendChild(sel);
+    row.appendChild(time);
+    rowsWrap.appendChild(row);
+    if(i < n-1){
+      const note = document.createElement("div");
+      note.className="break-note";
+      note.textContent = (i===1 ? "☕ veliki odmor "+state.settings.bigBreak+" min" : "odmor "+state.settings.smallBreak+" min");
+      rowsWrap.appendChild(note);
+    }
+  }
+}
+
+function saveSettings(){
+  state.settings.startPre = document.getElementById("startPre").value || "07:30";
+  state.settings.startPo = document.getElementById("startPo").value || "13:30";
+  state.settings.lessonLen = parseInt(document.getElementById("lessonLen").value,10) || 45;
+  state.settings.bigBreak = parseInt(document.getElementById("bigBreak").value,10) || 15;
+  state.settings.smallBreak = parseInt(document.getElementById("smallBreak").value,10) || 5;
+  renderPeriodRows();
+  saveLocal();
+}
+
+function renderOverview(){
+  const wrap = document.getElementById("overviewContent");
+  wrap.innerHTML = "";
+  const startStr = state.smena==="pre" ? state.settings.startPre : state.settings.startPo;
+  DAYS.forEach(d=>{
+    const arr = state.schedule[d] || [];
+    const periods = computePeriods(arr.length || 0, startStr);
+    const box = document.createElement("div");
+    box.className="overview-day card";
+    box.style.boxShadow="none";
+    box.style.background="#20202e";
+    let html = `<h3>${d}</h3>`;
+    if(arr.length===0){
+      html += `<div class="empty-msg">Nema unetih časova za ovaj dan.</div>`;
+    }else{
+      arr.forEach((subj,i)=>{
+        html += `<div class="overview-row"><span>${i+1}. ${subj || "<i>—</i>"}</span><span class="t">${fmt(periods[i].start)}–${fmt(periods[i].end)}</span></div>`;
+      });
+    }
+    box.innerHTML = html;
+    wrap.appendChild(box);
+  });
+}
+
+function downloadSchedule(){
+  const blob = new Blob([JSON.stringify(state,null,2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "raspored-casova.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function uploadSchedule(evt){
+  const file = evt.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    try{
+      const loaded = JSON.parse(e.target.result);
+      state = Object.assign(state, loaded);
+      document.getElementById("startPre").value = state.settings.startPre;
+      document.getElementById("startPo").value = state.settings.startPo;
+      document.getElementById("lessonLen").value = state.settings.lessonLen;
+      document.getElementById("bigBreak").value = state.settings.bigBreak;
+      document.getElementById("smallBreak").value = state.settings.smallBreak;
+      renderSubjectTags();
+      renderOverview();
+      saveLocal();
+      alert("Raspored je uspešno učitan!");
+    }catch(err){
+      alert("Fajl nije validan.");
+    }
+  };
+  reader.readAsText(file);
+}
+
+function resetAll(){
+  if(!confirm("Da li ste sigurni da želite da počnete iznova? Trenutni raspored (ako nije sačuvan) će biti izgubljen.")) return;
+  state = {
+    smena:null, tipSkole:"osnovna", razred:"1", subjects:[],
+    schedule:Object.fromEntries(DAYS.map(d=>[d,[]])),
+    settings:{ startPre:"07:30", startPo:"14:00", lessonLen:45, bigBreak:15, smallBreak:5 }
+  };
+  activeDay = DAYS[0];
+  clearLocal();
+  goStep("smena");
+}
+
+function restoreUIFromState(){
+  document.getElementById("tipSkole").value = state.tipSkole;
+  renderRazredOptions();
+  document.getElementById("razredSelect").value = state.razred;
+  document.getElementById("startPre").value = state.settings.startPre;
+  document.getElementById("startPo").value = state.settings.startPo;
+  document.getElementById("lessonLen").value = state.settings.lessonLen;
+  document.getElementById("bigBreak").value = state.settings.bigBreak;
+  document.getElementById("smallBreak").value = state.settings.smallBreak;
+  renderSubjectTags();
+}
+
+renderRazredOptions();
+if(loadLocal()){
+  restoreUIFromState();
+}
+goStep("smena");
+</script>
+</body>
+</html>
