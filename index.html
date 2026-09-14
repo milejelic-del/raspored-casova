@@ -208,13 +208,23 @@
   </header>
 
   <!-- KORAK 1: SMENA -->
-  <div class="step card" id="step-smena">
-    <h2>1. Da li dete ide u školu pre podne ili po podne?</h2>
+  <div class="step card" id="step-deca">
+    <h2>Za koje dete gledate raspored?</h2>
+    <div id="childList"></div>
+    <div class="add-row" style="margin-top:12px;">
+      <input type="text" id="newChildInput" placeholder="Ime deteta…">
+      <button class="btn small" onclick="addChild()">Dodaj</button>
+    </div>
+    <p style="text-align:center;color:var(--muted);font-size:.8rem;margin:14px 0 8px;">— ili —</p>
+    <button class="btn outline" onclick="document.getElementById('fileInputStart').click()">📂 Učitaj sačuvani raspored iz fajla</button>
+    <input type="file" id="fileInputStart" accept="application/json" onchange="uploadSchedule(event)">
+  </div>
+
+  <div class="step card hidden" id="step-smena">
+    <div class="topnav"><button onclick="goStep('deca')">‹ Promeni dete</button><span></span></div>
+    <h2 id="smenaTitle">Da li dete ide u školu pre podne ili po podne?</h2>
     <button class="btn" onclick="setSmena('pre')">☀️ Pre podne</button>
     <button class="btn secondary" onclick="setSmena('po')">🌇 Po podne</button>
-    <p style="text-align:center;color:var(--muted);font-size:.8rem;margin:14px 0 8px;">— ili —</p>
-    <button class="btn outline" onclick="document.getElementById('fileInputStart').click()">📂 Već imate sačuvan raspored? Učitajte fajl</button>
-    <input type="file" id="fileInputStart" accept="application/json" onchange="uploadSchedule(event)">
   </div>
 
   <!-- KORAK 2: RAZRED -->
@@ -292,8 +302,8 @@
 
   <!-- KORAK 5: PREGLED -->
   <div class="step card hidden" id="step-overview">
-    <div class="topnav"><button onclick="goStep('schedule')">‹ Izmeni raspored</button><span></span></div>
-    <h2>📅 Nedeljni raspored</h2>
+    <div class="topnav"><button onclick="goStep('schedule')">‹ Izmeni raspored</button><button onclick="goStep('deca')">Promeni dete ›</button></div>
+    <h2>📅 Raspored — <span id="overviewChildName"></span></h2>
     <p style="color:var(--accent);font-size:.8rem;margin-top:-6px;">✓ Raspored se automatski čuva na ovom telefonu/računaru</p>
     <div class="day-tabs" id="overviewDayTabs"></div>
     <div id="overviewContent"></div>
@@ -325,42 +335,129 @@ const SUBJECTS_SREDNJA = {
   "IV": ["Srpski jezik i književnost","Matematika","Engleski jezik","Fizičko i zdravstveno vaspitanje","Ustav i pravo građana","Filozofija"]
 };
 
-let state = {
-  smena: null,
-  tipSkole: "osnovna",
-  razred: "1",
-  subjects: [],
-  schedule: {},          // {Ponedeljak: [subj,subj,null,...]}
-  extra: {},             // {Ponedeljak: [{name,start,end}, ...]}
-  settings: { startPre:"07:30", startPo:"14:00", lessonLen:45, bigBreak:15, smallBreak:5 }
-};
+function blankChildData(){
+  const d = {
+    smena: null,
+    tipSkole: "osnovna",
+    razred: "1",
+    subjects: [],
+    schedule: {},
+    extra: {},
+    settings: { startPre:"07:30", startPo:"14:00", lessonLen:45, bigBreak:15, smallBreak:5 }
+  };
+  DAYS.forEach(day => { d.schedule[day] = []; d.extra[day] = []; });
+  return d;
+}
+
+let profiles = { children: [], activeIndex: 0 };
+let state = blankChildData();
 let activeDay = DAYS[0];
 
-DAYS.forEach(d => { state.schedule[d] = []; state.extra[d] = []; });
+function currentChildName(){
+  const c = profiles.children[profiles.activeIndex];
+  return c ? c.name : "";
+}
+
+function renderChildList(){
+  const wrap = document.getElementById("childList");
+  wrap.innerHTML = "";
+  if(profiles.children.length===0){
+    wrap.innerHTML = '<div class="empty-msg">Još nema unete dece — dodajte prvo dete ispod.</div>';
+    return;
+  }
+  profiles.children.forEach((c,i)=>{
+    const row = document.createElement("div");
+    row.style.cssText = "display:flex;gap:8px;align-items:center;margin-bottom:8px;";
+    const btn = document.createElement("button");
+    btn.className = "btn";
+    btn.style.cssText = "margin:0;flex:1;text-align:left;";
+    btn.textContent = "👦 " + c.name;
+    btn.onclick = ()=>selectChild(i);
+    const del = document.createElement("button");
+    del.style.cssText = "border:none;background:none;color:var(--danger);font-size:1.1rem;cursor:pointer;";
+    del.textContent = "✕";
+    del.onclick = ()=>removeChild(i);
+    row.appendChild(btn); row.appendChild(del);
+    wrap.appendChild(row);
+  });
+}
+
+function addChild(){
+  const inp = document.getElementById("newChildInput");
+  const name = inp.value.trim();
+  if(!name) return;
+  profiles.children.push({ name: name, data: blankChildData() });
+  inp.value = "";
+  saveLocal();
+  renderChildList();
+  selectChild(profiles.children.length - 1);
+}
+
+function removeChild(i){
+  if(!confirm("Obrisati dete \"" + profiles.children[i].name + "\" i njegov raspored?")) return;
+  profiles.children.splice(i,1);
+  if(profiles.activeIndex >= profiles.children.length) profiles.activeIndex = 0;
+  saveLocal();
+  renderChildList();
+}
+
+function selectChild(i){
+  profiles.activeIndex = i;
+  state = profiles.children[i].data;
+  activeDay = DAYS[0];
+  saveLocal();
+  restoreUIFromState();
+  document.getElementById("smenaTitle").textContent =
+    "Da li " + profiles.children[i].name + " ide u školu pre podne ili po podne?";
+  goStep("smena");
+}
 
 function goStep(name){
   document.querySelectorAll(".step").forEach(s=>s.classList.add("hidden"));
   document.getElementById("step-"+name).classList.remove("hidden");
+  if(name==="deca"){ renderChildList(); }
   if(name==="schedule"){ renderDayTabs(); renderPeriodRows(); renderExtraActivities(); }
-  if(name==="overview"){ overviewActiveDay = todayDayName(); renderOverviewTabs(); renderOverview(); }
+  if(name==="overview"){ document.getElementById("overviewChildName").textContent = currentChildName(); overviewActiveDay = todayDayName(); renderOverviewTabs(); renderOverview(); }
   window.scrollTo(0,0);
 }
 
-const STORAGE_KEY = "rasporedCasovaState_v1";
+const STORAGE_KEY = "rasporedCasovaProfiles_v2";
+const OLD_STORAGE_KEY = "rasporedCasovaState_v1";
 function saveLocal(){
-  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){ /* localStorage nedostupan */ }
+  try{
+    if(profiles.children[profiles.activeIndex]) profiles.children[profiles.activeIndex].data = state;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(profiles));
+  }catch(e){ /* localStorage nedostupan */ }
 }
 function loadLocal(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
-    if(!raw) return false;
-    const loaded = JSON.parse(raw);
-    state = Object.assign(state, loaded);
-    return true;
+    if(raw){
+      const loaded = JSON.parse(raw);
+      if(loaded && Array.isArray(loaded.children)){
+        profiles = loaded;
+        if(profiles.children.length){
+          if(profiles.activeIndex >= profiles.children.length) profiles.activeIndex = 0;
+          state = profiles.children[profiles.activeIndex].data;
+        }
+        return true;
+      }
+    }
+    // migracija starog formata (jedno dete)
+    const old = localStorage.getItem(OLD_STORAGE_KEY);
+    if(old){
+      const oldState = JSON.parse(old);
+      const data = Object.assign(blankChildData(), oldState);
+      profiles = { children:[{ name:"Dete 1", data: data }], activeIndex:0 };
+      state = data;
+      saveLocal();
+      return true;
+    }
+    return false;
   }catch(e){ return false; }
 }
 function clearLocal(){
-  try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+  try{ localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(OLD_STORAGE_KEY); }catch(e){}
 }
 
 function setSmena(val){
@@ -635,7 +732,7 @@ function renderOverview(){
 }
 
 function downloadSchedule(){
-  const blob = new Blob([JSON.stringify(state,null,2)], {type:"application/json"});
+  const blob = new Blob([JSON.stringify(profiles,null,2)], {type:"application/json"});
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -651,11 +748,20 @@ function uploadSchedule(evt){
   reader.onload = (e)=>{
     try{
       const loaded = JSON.parse(e.target.result);
-      state = Object.assign(state, loaded);
+      if(loaded && Array.isArray(loaded.children)){
+        profiles = loaded;
+        if(profiles.activeIndex >= profiles.children.length) profiles.activeIndex = 0;
+        if(profiles.children.length) state = profiles.children[profiles.activeIndex].data;
+      }else{
+        // stari format — jedno dete
+        const data = Object.assign(blankChildData(), loaded);
+        profiles = { children:[{ name:"Dete 1", data: data }], activeIndex:0 };
+        state = data;
+      }
       restoreUIFromState();
       saveLocal();
-      goStep("smena");
-      alert("Raspored je učitan. Izaberite da li je pre ili po podne, da bi se prikazala tačna vremena.");
+      goStep("deca");
+      alert("Raspored je učitan. Izaberite dete, pa smenu, da bi se prikazala tačna vremena.");
     }catch(err){
       alert("Fajl nije validan.");
     }
@@ -665,15 +771,13 @@ function uploadSchedule(evt){
 }
 
 function resetAll(){
-  if(!confirm("Da li ste sigurni da želite da počnete iznova? Trenutni raspored (ako nije sačuvan) će biti izgubljen.")) return;
-  state = {
-    smena:null, tipSkole:"osnovna", razred:"1", subjects:[],
-    schedule:Object.fromEntries(DAYS.map(d=>[d,[]])),
-    extra:Object.fromEntries(DAYS.map(d=>[d,[]])),
-    settings:{ startPre:"07:30", startPo:"14:00", lessonLen:45, bigBreak:15, smallBreak:5 }
-  };
+  const ime = currentChildName();
+  if(!confirm("Obrisati raspored za \"" + ime + "\" i uneti ga iznova?")) return;
+  state = blankChildData();
+  if(profiles.children[profiles.activeIndex]) profiles.children[profiles.activeIndex].data = state;
   activeDay = DAYS[0];
-  clearLocal();
+  saveLocal();
+  restoreUIFromState();
   goStep("smena");
 }
 
@@ -690,10 +794,9 @@ function restoreUIFromState(){
 }
 
 renderRazredOptions();
-if(loadLocal()){
-  restoreUIFromState();
-}
-goStep("smena");
+loadLocal();
+if(profiles.children.length) restoreUIFromState();
+goStep("deca");
 </script>
 </body>
 </html>
