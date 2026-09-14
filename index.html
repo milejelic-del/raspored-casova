@@ -255,6 +255,11 @@
     <select id="numPeriods" onchange="setNumPeriods()"></select>
     <div id="periodRows"></div>
 
+    <hr style="border:none;border-top:1px solid #2a2a3a;margin:18px 0 12px;">
+    <h3 style="margin:0 0 10px;font-size:1rem;color:var(--accent);">⚽ Vanškolske aktivnosti</h3>
+    <div id="extraRows"></div>
+    <button class="btn secondary" onclick="addExtraActivity()">+ Dodaj aktivnost</button>
+
     <details>
       <summary>⚙️ Podešavanja vremena (opciono)</summary>
       <div class="row2">
@@ -321,16 +326,17 @@ let state = {
   razred: "1",
   subjects: [],
   schedule: {},          // {Ponedeljak: [subj,subj,null,...]}
+  extra: {},             // {Ponedeljak: [{name,start,end}, ...]}
   settings: { startPre:"07:30", startPo:"14:00", lessonLen:45, bigBreak:15, smallBreak:5 }
 };
 let activeDay = DAYS[0];
 
-DAYS.forEach(d => state.schedule[d] = []);
+DAYS.forEach(d => { state.schedule[d] = []; state.extra[d] = []; });
 
 function goStep(name){
   document.querySelectorAll(".step").forEach(s=>s.classList.add("hidden"));
   document.getElementById("step-"+name).classList.remove("hidden");
-  if(name==="schedule"){ renderDayTabs(); renderPeriodRows(); }
+  if(name==="schedule"){ renderDayTabs(); renderPeriodRows(); renderExtraActivities(); }
   if(name==="overview"){ renderOverview(); }
   window.scrollTo(0,0);
 }
@@ -424,7 +430,7 @@ function renderDayTabs(){
     const b = document.createElement("button");
     b.textContent = d;
     if(d===activeDay) b.classList.add("active");
-    b.onclick = ()=>{ activeDay=d; renderDayTabs(); renderPeriodRows(); };
+    b.onclick = ()=>{ activeDay=d; renderDayTabs(); renderPeriodRows(); renderExtraActivities(); };
     wrap.appendChild(b);
   });
 }
@@ -509,6 +515,48 @@ function renderPeriodRows(){
   }
 }
 
+function renderExtraActivities(){
+  const wrap = document.getElementById("extraRows");
+  if(!wrap) return;
+  wrap.innerHTML = "";
+  const list = state.extra[activeDay] || [];
+  if(list.length===0){
+    wrap.innerHTML = '<div class="empty-msg">Nema dodatih aktivnosti za ovaj dan.</div>';
+    return;
+  }
+  list.forEach((act,i)=>{
+    const row = document.createElement("div");
+    row.className = "period-row";
+    row.innerHTML = `
+      <input type="text" placeholder="Naziv aktivnosti" value="${(act.name||'').replace(/"/g,'&quot;')}" style="flex:2;margin:0;" data-field="name" data-i="${i}">
+      <input type="time" value="${act.start||'16:00'}" style="flex:1;margin:0;min-width:82px;" data-field="start" data-i="${i}">
+      <span style="color:var(--muted);font-size:.8rem;">–</span>
+      <input type="time" value="${act.end||'17:00'}" style="flex:1;margin:0;min-width:82px;" data-field="end" data-i="${i}">
+      <button onclick="removeExtraActivity(${i})" style="border:none;background:none;color:var(--danger);font-size:1.1rem;cursor:pointer;flex:0 0 auto;">✕</button>
+    `;
+    wrap.appendChild(row);
+  });
+  wrap.querySelectorAll("input").forEach(inp=>{
+    inp.addEventListener("input", (e)=>{
+      const i = parseInt(e.target.dataset.i,10);
+      const field = e.target.dataset.field;
+      state.extra[activeDay][i][field] = e.target.value;
+      saveLocal();
+    });
+  });
+}
+function addExtraActivity(){
+  if(!state.extra[activeDay]) state.extra[activeDay] = [];
+  state.extra[activeDay].push({name:"", start:"16:00", end:"17:00"});
+  renderExtraActivities();
+  saveLocal();
+}
+function removeExtraActivity(i){
+  state.extra[activeDay].splice(i,1);
+  renderExtraActivities();
+  saveLocal();
+}
+
 function saveSettings(){
   state.settings.startPre = document.getElementById("startPre").value || "07:30";
   state.settings.startPo = document.getElementById("startPo").value || "13:30";
@@ -536,6 +584,13 @@ function renderOverview(){
     }else{
       arr.forEach((subj,i)=>{
         html += `<div class="overview-row"><span>${i+1}. ${subj || "<i>—</i>"}</span><span class="t">${fmt(periods[i].start)}–${fmt(periods[i].end)}</span></div>`;
+      });
+    }
+    const extraList = (state.extra[d] || []).filter(a=>a.name && a.name.trim());
+    if(extraList.length){
+      html += `<h4 style="margin:12px 0 6px;font-size:.8rem;color:var(--accent);">⚽ Vanškolske aktivnosti</h4>`;
+      extraList.forEach(act=>{
+        html += `<div class="overview-row"><span>${act.name}</span><span class="t">${act.start}–${act.end}</span></div>`;
       });
     }
     box.innerHTML = html;
@@ -578,6 +633,7 @@ function resetAll(){
   state = {
     smena:null, tipSkole:"osnovna", razred:"1", subjects:[],
     schedule:Object.fromEntries(DAYS.map(d=>[d,[]])),
+    extra:Object.fromEntries(DAYS.map(d=>[d,[]])),
     settings:{ startPre:"07:30", startPo:"14:00", lessonLen:45, bigBreak:15, smallBreak:5 }
   };
   activeDay = DAYS[0];
