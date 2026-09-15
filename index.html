@@ -307,7 +307,8 @@
     <p style="color:var(--accent);font-size:.8rem;margin-top:-6px;">✓ Raspored se automatski čuva na ovom telefonu/računaru</p>
     <div class="day-tabs" id="overviewDayTabs"></div>
     <div id="overviewContent"></div>
-    <button class="btn secondary" style="margin-top:10px" onclick="downloadSchedule()">⬇️ Sačuvaj raspored (fajl)</button>
+    <button class="btn secondary" style="margin-top:10px" onclick="shareSchedule()">🔗 Podeli raspored (link)</button>
+    <button class="btn secondary" onclick="downloadSchedule()">⬇️ Sačuvaj raspored (fajl)</button>
     <button class="btn outline" onclick="document.getElementById('fileInput').click()">⬆️ Učitaj sačuvani raspored</button>
     <input type="file" id="fileInput" accept="application/json" onchange="uploadSchedule(event)">
     <button class="btn danger" style="margin-top:14px" onclick="resetAll()">Počni iznova</button>
@@ -731,6 +732,48 @@ function renderOverview(){
   wrap.appendChild(box);
 }
 
+function encodeState(obj){
+  return btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
+}
+function decodeState(str){
+  return JSON.parse(decodeURIComponent(escape(atob(str))));
+}
+
+async function shareSchedule(){
+  try{
+    const link = location.origin + location.pathname + "#r=" + encodeState(profiles);
+    if(navigator.share){
+      await navigator.share({ title:"Raspored časova", text:"Raspored časova", url: link });
+      return;
+    }
+    if(navigator.clipboard){
+      await navigator.clipboard.writeText(link);
+      alert("Link je kopiran! Pošaljite ga članu porodice — kad ga otvori, videće ovaj raspored.");
+      return;
+    }
+    prompt("Kopirajte ovaj link i pošaljite ga:", link);
+  }catch(e){
+    alert("Deljenje nije uspelo na ovom uređaju.");
+  }
+}
+
+function loadFromLink(){
+  const h = location.hash || "";
+  if(!h.startsWith("#r=")) return false;
+  try{
+    const loaded = decodeState(h.slice(3));
+    if(loaded && Array.isArray(loaded.children) && loaded.children.length){
+      profiles = loaded;
+      profiles.activeIndex = 0;
+      state = profiles.children[0].data;
+      saveLocal();
+      history.replaceState(null,"",location.pathname);
+      return true;
+    }
+  }catch(e){ /* neispravan link */ }
+  return false;
+}
+
 function downloadSchedule(){
   const blob = new Blob([JSON.stringify(profiles,null,2)], {type:"application/json"});
   const url = URL.createObjectURL(blob);
@@ -794,9 +837,11 @@ function restoreUIFromState(){
 }
 
 renderRazredOptions();
-loadLocal();
+const fromLink = loadFromLink();
+if(!fromLink) loadLocal();
 if(profiles.children.length) restoreUIFromState();
 goStep("deca");
+if(fromLink) alert("Raspored je učitan iz deljenog linka i sačuvan na ovom uređaju.");
 </script>
 </body>
 </html>
